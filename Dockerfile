@@ -27,20 +27,30 @@ FROM deepracticexs/agent-runtime
 
 WORKDIR /app
 
-# Copy built assets and server code
+# Copy built assets and server code (as root first)
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml ./
 
-# Install pnpm and PromptX CLI globally
-RUN sudo npm install -g pnpm @promptx/cli
+# Copy PromptX resources
+COPY .promptx ./.promptx
 
-# Install production dependencies
-RUN pnpm install --prod --frozen-lockfile
+# Install build tools for native modules and fix permissions
+RUN sudo apt-get update && \
+    sudo apt-get install -y python3 make g++ && \
+    sudo apt-get clean && \
+    sudo rm -rf /var/lib/apt/lists/* && \
+    sudo chown -R node:node /app && \
+    sudo npm install -g pnpm @promptx/cli tsx && \
+    pnpm install --frozen-lockfile && \
+    pnpm add dotenv tsx && \
+    cd /app/node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npm run build-release
 
-# Create data directory
-RUN mkdir -p /home/node/.agentx
+# Create data directory and copy PromptX resources to user home
+RUN mkdir -p /home/node/.agentx && \
+    cp -r /app/.promptx /home/node/.promptx && \
+    chown -R node:node /home/node/.promptx
 
 # Environment - Defaults
 ENV NODE_ENV=production
@@ -53,12 +63,12 @@ ENV AGENTX_DIR=/home/node/.agentx
 # Run as non-root user
 USER node
 
-# Expose port
-EXPOSE 5800
+# Expose ports (HTTP + WebSocket)
+EXPOSE 80 5800
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:5800/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
 
 # Run server
-CMD ["npx", "tsx", "src/server.ts"]
+CMD ["tsx", "src/server.ts"]

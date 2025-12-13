@@ -7,6 +7,8 @@
 import { config } from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createServer } from "http";
+import { readFileSync, existsSync } from "fs";
 import { BuffettAgent } from "./agent.js";
 
 // Get __dirname equivalent in ES module
@@ -77,11 +79,61 @@ async function startServer() {
     `  - MCP Servers: ${Object.keys(BuffettAgent.mcpServers || {}).join(", ") || "none"}`
   );
 
+  // Serve static files in production
+  const distDir = resolve(__dirname, "../dist");
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (isProduction && existsSync(distDir)) {
+    const mimeTypes: Record<string, string> = {
+      '.html': 'text/html',
+      '.js': 'application/javascript',
+      '.css': 'text/css',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+    };
+
+    const httpServer = createServer((req, res) => {
+      let filePath = resolve(distDir, req.url === '/' ? 'index.html' : req.url!.slice(1));
+
+      // Health check endpoint
+      if (req.url === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok' }));
+        return;
+      }
+
+      // Fallback to index.html for SPA routing
+      if (!existsSync(filePath)) {
+        filePath = resolve(distDir, 'index.html');
+      }
+
+      try {
+        const content = readFileSync(filePath);
+        const ext = filePath.substring(filePath.lastIndexOf('.'));
+        const contentType = mimeTypes[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': contentType });
+        res.end(content);
+      } catch {
+        res.writeHead(404);
+        res.end('Not Found');
+      }
+    });
+
+    // Start HTTP server for static files
+    const HTTP_PORT = parseInt(process.env.HTTP_PORT || "80", 10);
+    httpServer.listen(HTTP_PORT, '0.0.0.0', () => {
+      console.log(`\n✓ HTTP server started on http://0.0.0.0:${HTTP_PORT}`);
+    });
+  }
+
   // Start WebSocket server
   await agentx.listen(PORT);
 
   console.log(`\n✓ WebSocket server started on ws://localhost:${PORT}`);
-  console.log(`\nReady! Open http://localhost:5173 in your browser.`);
+  console.log(`\nReady! Open http://localhost:${isProduction ? (process.env.HTTP_PORT || '80') : '5173'} in your browser.`);
 
   // Graceful shutdown
   const shutdown = async () => {
