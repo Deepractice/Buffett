@@ -1,0 +1,8 @@
+/* globals.css from @agentxjs/ui already includes Tailwind */
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
