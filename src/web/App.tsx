@@ -21,11 +21,8 @@ const slides = [
 function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // 动态获取 WebSocket URL：生产环境用 5800，开发环境用 5200
-  const isDev = window.location.port === "5173";
-  const wsUrl = isDev
-    ? "ws://localhost:5200"
-    : `ws://${window.location.hostname}:5800`;
+  // WebSocket URL：统一使用 5800 端口
+  const wsUrl = `ws://${window.location.hostname}:5800`;
   const agentx = useAgentX(wsUrl);
 
   const prevSlide = () => setCurrentSlide((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
