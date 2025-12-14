@@ -8,4 +8,10 @@ export default defineConfig({
   build: {
     outDir: "dist",
   },
+  // Electron 渲染进程需要的配置
+  base: './',
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
 });
