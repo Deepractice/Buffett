@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@agentxjs/runtime':
-        specifier: ^1.3.0
-        version: 1.3.0(zod@3.25.76)
+        specifier: ^1.4.0
+        version: 1.4.0(zod@3.25.76)
       '@agentxjs/ui':
         specifier: ^1.3.0
         version: 1.3.0(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(emoji-mart@5.6.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       agentxjs:
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: ^1.4.0
+        version: 1.4.0
       allotment:
         specifier: ^1.20.4
         version: 1.20.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -63,20 +63,29 @@ importers:
 
 packages:
 
-  '@agentxjs/agent@1.3.0':
-    resolution: {integrity: sha512-LXq0Y4lf44CIsh4Y4TNpO6hk9e92EQ8dXGkpbmC8CvGUPLBzjMYKyaS5cQQ2ObJpeVpoEKh+V4hBrGuokX+i9w==}
+  '@agentxjs/agent@1.4.0':
+    resolution: {integrity: sha512-pMC7EE5CR9NKDiGvdA+NKessS/8sMbHozKnMg48BzbmRH22f7KkYa1MlFESTTiU7l1seF+aEJCIjiEX4f10ppA==}
 
   '@agentxjs/common@1.3.0':
     resolution: {integrity: sha512-JS4F/iiu699OXIhYBGKAujq+WmBOcrvhhNfVLXQHpM+YjBsMelid+w/rBKYe2TAgys/Ak1Gs+szBiKe4jWY+ig==}
 
+  '@agentxjs/common@1.4.0':
+    resolution: {integrity: sha512-m2rw4oI/JUW06o90Qx234SQdn2/qnnGho79iDoQ5VuOOymLnDPtW6+GTDqv5Yqy62ThmE/PbK8eX0cqBdjhsbw==}
+
   '@agentxjs/network@1.3.0':
     resolution: {integrity: sha512-9zMdPPGZ7VXPAn2KCBvJAnMXxSXYlUDzekIbPehFD4JP/dIQvl4BW825/Uzz5WdLrFv/qV37e2DVHEKfylv8Xg==}
 
-  '@agentxjs/runtime@1.3.0':
-    resolution: {integrity: sha512-jIpBZ3I4RVyRCvhWwYN69Y9z5cUt49xhJ88LibKonElsFZRDPERsN9N+A/jos3J4SRWXlf3GRCSaLjYhvnqekQ==}
+  '@agentxjs/network@1.4.0':
+    resolution: {integrity: sha512-pemBQxaREQAaCc+cFWSEpGV48AirNzptVwI/YuKM+0vKA1qdIn/Ieho9jjtPHuX9xOWmit7Jq/2Y2JQ/d8IN6g==}
+
+  '@agentxjs/runtime@1.4.0':
+    resolution: {integrity: sha512-PYvk0tjuksDNNJZtIQpxbce9dUf+A6E0lVO93w5iic+9FP36ZzrVrKbEFtndqVvtjRZ3L6GZDmI3wHf4YMuNjw==}
 
   '@agentxjs/types@1.3.0':
     resolution: {integrity: sha512-ut+SHqPZj9E2qBH/U8NnwJg4Koo3wFebQKbrptxkgh5KLpRaj493eSwq72cX5wK/dqScyc3v5I9/TBZdMucWhQ==}
+
+  '@agentxjs/types@1.4.0':
+    resolution: {integrity: sha512-pWVvCshCx1iUt4h0c5zNC8Lw5pxfwp4U/yIj3Ju8HivjVF1tPO09oeRC89mF5SCWqc8NX25WNMvcN1iWzbaXcg==}
 
   '@agentxjs/ui@1.3.0':
     resolution: {integrity: sha512-1hJk801LygIDzT3/bpOFNYi4sssOx4BnjCL4z/Xrr/XhtOpDk/6aQxKjfre0BnK9Xop3dvZs+JAEMd0KuaJvpA==}
@@ -941,6 +950,9 @@ packages:
 
   agentxjs@1.3.0:
     resolution: {integrity: sha512-4HAl7N26H4Nnwo0etBggi4RWGApMlWyFtehELx09X4B+byNWuEl+3FbIgxkOHC86j+Z7Kv/3N07e+8QmbVN0iw==}
+
+  agentxjs@1.4.0:
+    resolution: {integrity: sha512-HH00n106NasIsw6DimUMZV7DEdYErIhAyt5sobJcyYvxDlVFciEfUodLSrLyrRJdhaBGMcKLMH8Kmwn+Tchl+w==}
 
   allotment@1.20.4:
     resolution: {integrity: sha512-LMM5Xe5nLePFOLAlW/5k3ARqznYGUyNekV4xJrfDKn1jimW3nlZE6hT/Tu0T8s0VgAkr9s2P7+uM0WvJKn5DAw==}
@@ -1972,15 +1984,19 @@ packages:
 
 snapshots:
 
-  '@agentxjs/agent@1.3.0':
+  '@agentxjs/agent@1.4.0':
     dependencies:
-      '@agentxjs/common': 1.3.0
-      '@agentxjs/types': 1.3.0
+      '@agentxjs/common': 1.4.0
+      '@agentxjs/types': 1.4.0
       rxjs: 7.8.2
 
   '@agentxjs/common@1.3.0':
     dependencies:
       '@agentxjs/types': 1.3.0
+
+  '@agentxjs/common@1.4.0':
+    dependencies:
+      '@agentxjs/types': 1.4.0
 
   '@agentxjs/network@1.3.0':
     dependencies:
@@ -1992,11 +2008,21 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@agentxjs/runtime@1.3.0(zod@3.25.76)':
+  '@agentxjs/network@1.4.0':
     dependencies:
-      '@agentxjs/agent': 1.3.0
-      '@agentxjs/common': 1.3.0
-      '@agentxjs/types': 1.3.0
+      '@agentxjs/common': 1.4.0
+      '@agentxjs/types': 1.4.0
+      reconnecting-websocket: 4.4.0
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@agentxjs/runtime@1.4.0(zod@3.25.76)':
+    dependencies:
+      '@agentxjs/agent': 1.4.0
+      '@agentxjs/common': 1.4.0
+      '@agentxjs/types': 1.4.0
       '@anthropic-ai/claude-agent-sdk': 0.1.69(zod@3.25.76)
       better-sqlite3: 11.10.0
       db0: 0.3.4(better-sqlite3@11.10.0)
@@ -2029,6 +2055,8 @@ snapshots:
       - zod
 
   '@agentxjs/types@1.3.0': {}
+
+  '@agentxjs/types@1.4.0': {}
 
   '@agentxjs/ui@1.3.0(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(emoji-mart@5.6.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -2718,6 +2746,17 @@ snapshots:
       '@agentxjs/common': 1.3.0
       '@agentxjs/network': 1.3.0
       '@agentxjs/types': 1.3.0
+      reconnecting-websocket: 4.4.0
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  agentxjs@1.4.0:
+    dependencies:
+      '@agentxjs/common': 1.4.0
+      '@agentxjs/network': 1.4.0
+      '@agentxjs/types': 1.4.0
       reconnecting-websocket: 4.4.0
       ws: 8.18.3
     transitivePeerDependencies:
