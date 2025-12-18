@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { Chat, useAgentX, useImages } from "@agentxjs/ui";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, MeshDistortMaterial, Stars, PerspectiveCamera, Environment } from "@react-three/drei";
+import { Float, MeshDistortMaterial, Stars, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
 import type { AgentInfo } from "../types";
 import {
@@ -165,20 +165,18 @@ function LoginScene() {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 0, 6]} fov={50} />
-      
+
       {/* Bright Studio Lighting */}
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={1.2} />
       <directionalLight position={[5, 5, 5]} intensity={1.5} color="#ffffff" castShadow />
       <directionalLight position={[-5, 5, -5]} intensity={1} color="#e0f2fe" />
       <pointLight position={[0, -5, 2]} intensity={0.5} color="#bae6fd" />
-      
-      {/* Environment Reflections (Studio) */}
-      <Environment preset="warehouse" />
+      <spotLight position={[0, 10, 0]} intensity={0.3} angle={0.6} penumbra={1} color="#ffffff" />
 
       {/* Main Objects */}
       <group position={[0, 0, 0]}>
         <AICore />
-        
+
         {/* Soft Pastel Data Particles */}
         <FloatingData position={[-2, 1.5, -1]} color="#38bdf8" scale={0.6} /> {/* Sky Blue */}
         <FloatingData position={[2, -1, 1]} color="#818cf8" scale={0.5} />  {/* Indigo Soft */}
