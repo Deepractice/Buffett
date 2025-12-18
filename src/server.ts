@@ -35,9 +35,9 @@ async function startServer() {
   const AGENTX_DIR = process.env.AGENTX_DIR || resolve(__dirname, "../.agentx");
   const model = process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20240620";
 
-  // 3. 初始化 AgentX
+  // 3. 初始化 AgentX (配置 PromptX MCP)
   const { createAgentX } = await import("agentxjs");
-  
+
   const agentx = await createAgentX({
     llm: {
       apiKey,
@@ -48,8 +48,16 @@ async function startServer() {
     },
     agentxDir: AGENTX_DIR,
     defaultAgent: GuanhuaAgent, // 设置默认 Agent
-    // 注意: AgentX 会根据前端传递的 systemPrompt 动态切换角色行为
-    // 所以我们不需要在这里硬编码所有 Agent 的路由，只要 DefaultAgent 能承载连接即可
+    // PromptX MCP 配置
+    mcpServers: {
+      promptx: {
+        command: "promptx",
+        args: ["mcp"],
+        env: {
+          // PromptX 环境变量(如需要)
+        }
+      }
+    }
   } as any);
 
   // 4. 启动 WebSocket 服务

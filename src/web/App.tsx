@@ -1,140 +1,661 @@
-import { useState } from "react";
-import { Allotment } from "allotment";
-import { ResponsiveStudio, useAgentX } from "@agentxjs/ui";
-import "allotment/dist/style.css";
+/**
+ * 电商智能助手平台 - 主应用
+ * Lucid UI - Design Forward Edition
+ */
 
-// PPT 幻灯片配置
-const slides = [
-  { src: "/slides/1_AI.png", title: "巴菲特AI - 对话式智能炒股助手" },
-  { src: "/slides/2_.png", title: "第 2 页" },
-  { src: "/slides/3_.png", title: "第 3 页" },
-  { src: "/slides/4_.png", title: "第 4 页" },
-  { src: "/slides/5_.png", title: "第 5 页" },
-  { src: "/slides/6_.png", title: "第 6 页" },
-  { src: "/slides/7_AgentX-PromptX.png", title: "AgentX + PromptX" },
-  { src: "/slides/8_.png", title: "第 8 页" },
-  { src: "/slides/9_.png", title: "第 9 页" },
-  { src: "/slides/10_.png", title: "第 10 页" },
-  { src: "/slides/11_.png", title: "第 11 页" },
+import { useState, useEffect, useRef, Suspense } from "react";
+import { Chat, useAgentX, useImages } from "@agentxjs/ui";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Float, MeshDistortMaterial, Stars, PerspectiveCamera, Environment } from "@react-three/drei";
+import * as THREE from "three";
+import type { AgentInfo } from "../types";
+import {
+  GuanhuaAgent,
+  FashionCEOAgent,
+  VideoMasterAgent,
+  XiaohongshuWriterAgent,
+} from "../agent";
+
+// ============================================
+// Design System Tokens (Mapped to Tailwind)
+// ============================================
+
+// 1. Rational (Logic/Tech) - Blue/Slate
+const THEME_RATIONAL = {
+  bg: "bg-sky-50",
+  text: "text-sky-700", 
+  border: "border-sky-100",
+  icon_bg: "bg-sky-100",
+  active_indicator: "bg-sky-600"
+};
+
+// 2. Sentient (Creative/Human) - Amber/Rose
+const THEME_SENTIENT = {
+  bg: "bg-amber-50",
+  text: "text-amber-700",
+  border: "border-amber-100",
+  icon_bg: "bg-amber-100",
+  active_indicator: "bg-amber-500"
+};
+
+// 3. Expressive (Marketing/Visual) - Rose/Pink (Subtle)
+const THEME_EXPRESSIVE = {
+  bg: "bg-rose-50",
+  text: "text-rose-700",
+  border: "border-rose-100",
+  icon_bg: "bg-rose-100",
+  active_indicator: "bg-rose-500"
+};
+
+type Agent = AgentInfo & { theme: typeof THEME_RATIONAL };
+
+// ============================================
+// Configuration
+// ============================================
+
+const AGENTS_UI: Agent[] = [
+  {
+    id: "guanhua",
+    name: "冠华",
+    description: "换图与视觉优化专家",
+    icon: "🎨",
+    color: "", // Unused, using theme
+    theme: THEME_RATIONAL
+  },
+  {
+    id: "fashion-ceo",
+    name: "时尚CEO",
+    description: "品牌战略与经营顾问",
+    icon: "👔",
+    color: "",
+    theme: { ...THEME_RATIONAL, icon_bg: "bg-slate-100", text: "text-slate-700", active_indicator: "bg-slate-600" } // More serious
+  },
+  {
+    id: "video-master",
+    name: "剪辑大师",
+    description: "短视频内容制作",
+    icon: "🎬",
+    color: "",
+    theme: THEME_SENTIENT
+  },
+  {
+    id: "xiaohongshu-writer",
+    name: "种草达人",
+    description: "爆款文案创作",
+    icon: "📝",
+    color: "",
+    theme: THEME_EXPRESSIVE
+  },
 ];
 
-function App() {
-  const [currentSlide, setCurrentSlide] = useState(0);
+const AGENTS_MAP: Record<string, Agent & { systemPrompt: string }> = {
+  "guanhua": { ...AGENTS_UI[0], systemPrompt: GuanhuaAgent.systemPrompt },
+  "fashion-ceo": { ...AGENTS_UI[1], systemPrompt: FashionCEOAgent.systemPrompt },
+  "video-master": { ...AGENTS_UI[2], systemPrompt: VideoMasterAgent.systemPrompt },
+  "xiaohongshu-writer": { ...AGENTS_UI[3], systemPrompt: XiaohongshuWriterAgent.systemPrompt },
+};
 
-  // WebSocket URL：统一使用 5800 端口
-  const wsUrl = `ws://${window.location.hostname}:5800`;
-  const agentx = useAgentX(wsUrl);
+const PRESET_USERS: Record<string, string> = {
+  admin: "admin123",
+  demo: "demo123",
+};
 
-  const prevSlide = () => setCurrentSlide((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
-  const nextSlide = () => setCurrentSlide((prev) => (prev < slides.length - 1 ? prev + 1 : 0));
+const WS_URL = `ws://${window.location.hostname}:5800`;
 
-  if (!agentx) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center text-gray-600">
-          <p className="text-lg font-medium mb-2">连接服务器中...</p>
-          <p className="text-sm mt-2">请确保服务器正在运行：</p>
-          <code className="text-xs bg-gray-200 px-2 py-1 rounded mt-1 block">
-            pnpm dev:server
-          </code>
-        </div>
-      </div>
-    );
-  }
+// ============================================
+// 3D Scene Components (Light/Air Theme)
+// ============================================
+
+function AICore() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.x = state.clock.getElapsedTime() * 0.2;
+      meshRef.current.rotation.y = state.clock.getElapsedTime() * 0.3;
+    }
+  });
 
   return (
-    <div className="h-screen">
-      <Allotment>
-        {/* 左侧：PPT 展示区 */}
-        <Allotment.Pane minSize={300} preferredSize="50%">
-          <div className="h-full flex flex-col bg-gray-900">
-            {/* 顶部标题栏 */}
-            <div className="h-14 flex items-center justify-between px-6 border-b border-gray-700 bg-gray-800">
-              <h2 className="text-lg font-semibold text-white">
-                演示文稿
-              </h2>
-              <span className="text-sm text-gray-400">
-                {currentSlide + 1} / {slides.length}
-              </span>
-            </div>
+    <Float speed={2} rotationIntensity={1.5} floatIntensity={2}>
+      <mesh ref={meshRef} scale={1.8}>
+        <sphereGeometry args={[1, 64, 64]} />
+        {/* Ceramic / Pearl White Material */}
+        <meshPhysicalMaterial
+          color="#ffffff"
+          roughness={0.2}
+          metalness={0.1}
+          clearcoat={0.8}
+          clearcoatRoughness={0.1}
+          reflectivity={1}
+        />
+      </mesh>
+    </Float>
+  );
+}
 
-            {/* PPT 内容区 */}
-            <div className="flex-1 flex items-center justify-center p-4 relative">
-              {slides.length > 0 ? (
-                <>
-                  <img
-                    src={slides[currentSlide].src}
-                    alt={slides[currentSlide].title}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='%23374151' width='400' height='300'/%3E%3Ctext fill='%239CA3AF' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle'%3E将 PPT 图片放入 public/slides/%3C/text%3E%3C/svg%3E";
-                    }}
-                  />
+function FloatingData({ position, color, scale = 1 }: { position: [number, number, number], color: string, scale?: number }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame(() => {
+    if (meshRef.current) {
+      meshRef.current.rotation.x += 0.01;
+      meshRef.current.rotation.y += 0.02;
+    }
+  });
 
-                  {/* 左箭头 */}
-                  <button
-                    onClick={prevSlide}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full transition-all"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
+  return (
+    <Float speed={4} rotationIntensity={2} floatIntensity={1} floatingRange={[-0.2, 0.2]}>
+      <mesh ref={meshRef} position={position} scale={scale}>
+        <icosahedronGeometry args={[0.3, 0]} />
+        <meshStandardMaterial 
+          color={color} 
+          roughness={0.3}
+          metalness={0.5}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+    </Float>
+  );
+}
 
-                  {/* 右箭头 */}
-                  <button
-                    onClick={nextSlide}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-full transition-all"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </>
-              ) : (
-                <p className="text-gray-500">暂无幻灯片</p>
-              )}
-            </div>
+function LoginScene() {
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[0, 0, 6]} fov={50} />
+      
+      {/* Bright Studio Lighting */}
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 5, 5]} intensity={1.5} color="#ffffff" castShadow />
+      <directionalLight position={[-5, 5, -5]} intensity={1} color="#e0f2fe" />
+      <pointLight position={[0, -5, 2]} intensity={0.5} color="#bae6fd" />
+      
+      {/* Environment Reflections (Studio) */}
+      <Environment preset="warehouse" />
 
-            {/* 底部缩略图导航 */}
-            <div className="h-20 flex items-center justify-center gap-2 px-4 bg-gray-800 border-t border-gray-700 overflow-x-auto">
-              {slides.map((slide, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`flex-shrink-0 w-16 h-12 rounded border-2 overflow-hidden transition-all ${
-                    index === currentSlide
-                      ? "border-blue-500 ring-2 ring-blue-500/50"
-                      : "border-gray-600 hover:border-gray-500"
-                  }`}
-                >
-                  <img
-                    src={slide.src}
-                    alt={slide.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
+      {/* Main Objects */}
+      <group position={[0, 0, 0]}>
+        <AICore />
+        
+        {/* Soft Pastel Data Particles */}
+        <FloatingData position={[-2, 1.5, -1]} color="#38bdf8" scale={0.6} /> {/* Sky Blue */}
+        <FloatingData position={[2, -1, 1]} color="#818cf8" scale={0.5} />  {/* Indigo Soft */}
+        <FloatingData position={[1.5, 2, -2]} color="#cbd5e1" scale={0.4} /> {/* Silver */}
+        <FloatingData position={[-1.5, -2, 0.5]} color="#94a3b8" scale={0.5} /> {/* Slate */}
+      </group>
+    </>
+  );
+}
+
+// ============================================
+// Login Page (Modern Bright Design)
+// ============================================
+
+function LoginPage({ onLogin }: { onLogin: (userId: string) => void }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 800));
+    if (PRESET_USERS[username] === password) {
+      localStorage.setItem("userId", username);
+      localStorage.setItem("authToken", "token");
+      onLogin(username);
+    } else {
+      setError("账号或密码错误");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen-ios w-full flex bg-white font-sans text-slate-800 selection:bg-blue-100 selection:text-blue-900">
+      
+      {/* LEFT SIDE: 3D Visual - Clean & Bright */}
+      <div className="hidden md:flex w-[45%] bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden flex-col justify-center items-center border-r border-slate-100">
+        
+        {/* 3D Scene */}
+        <div className="absolute inset-0 z-0">
+          <Canvas dpr={[1, 2]}>
+            <Suspense fallback={null}>
+              <LoginScene />
+            </Suspense>
+          </Canvas>
+        </div>
+
+        {/* Overlay Content (Clean Typography) */}
+        <div className="relative z-10 w-full max-w-md px-10 text-center pointer-events-none">
+          <div className="mb-6 inline-flex items-center justify-center p-4 rounded-3xl bg-white/40 backdrop-blur-xl border border-white/60 shadow-xl shadow-slate-200/50 animate-fade-in-up">
+            <span className="text-4xl filter drop-shadow-sm">🧠</span>
           </div>
-        </Allotment.Pane>
+          
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4 animate-fade-in-up delay-100">
+            Agent Intelligence
+          </h1>
+          
+          <p className="text-lg text-slate-500 font-medium leading-relaxed max-w-sm mx-auto animate-fade-in-up delay-200">
+            激活你的数字员工。<br/>
+            设计、营销、策略，智能协作。
+          </p>
+        </div>
+      </div>
 
-        {/* 右侧：AI 智能体对话 */}
-        <Allotment.Pane minSize={350}>
-          <ResponsiveStudio
-            agentx={agentx}
-            containerId="default"
-            sidebarWidth={200}
-            searchable={true}
-            inputHeightRatio={0.25}
-          />
-        </Allotment.Pane>
-      </Allotment>
+      {/* RIGHT SIDE: Login Form */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white relative">
+        <div className="w-full max-w-[400px] animate-fade-in">
+          
+          {/* Logo */}
+          <div className="mb-10 text-center md:text-left">
+            <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center text-2xl font-bold mb-6 shadow-lg shadow-blue-600/20 mx-auto md:mx-0">
+              🛍️
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">欢迎回来</h1>
+            <p className="text-slate-500 mt-2 text-sm">登录以继续使用您的智能体服务。</p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">账号 / Email</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  className="w-full h-12 px-4 bg-white border border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl text-slate-900 text-base transition-all outline-none shadow-sm placeholder:text-slate-300"
+                  placeholder="请输入您的账号..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">密码</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full h-12 px-4 bg-white border border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl text-slate-900 text-base transition-all outline-none shadow-sm placeholder:text-slate-300"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600/20 cursor-pointer" />
+                <span className="text-slate-500 group-hover:text-slate-700 transition-colors">30天内自动登录</span>
+              </label>
+              <a href="#" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline decoration-2 underline-offset-2">忘记密码?</a>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl flex items-center gap-2 animate-shake">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transform active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  登录中...
+                </>
+              ) : "登 录"}
+            </button>
+
+            {/* Divider */}
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-100"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                <span className="bg-white px-3 text-slate-400 font-medium">其他方式登录</span>
+              </div>
+            </div>
+
+            {/* Social Buttons - Enhanced Visibility */}
+            <div className="grid grid-cols-2 gap-4">
+              <button type="button" className="h-11 flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl transition-all text-sm font-semibold text-slate-700 shadow-sm hover:shadow">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .533 5.347.533 12S5.867 24 12.48 24c3.44 0 6.04-1.133 8.147-3.253 2.147-2.147 2.813-5.387 2.813-8.24 0-.813-.08-1.587-.227-2.32H12.48z"/></svg>
+                Google
+              </button>
+              <button type="button" className="h-11 flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl transition-all text-sm font-semibold text-slate-700 shadow-sm hover:shadow">
+                <svg className="w-5 h-5 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+                Facebook
+              </button>
+            </div>
+          </form>
+
+          {/* Footer Demo Info */}
+          <div className="pt-8 text-center">
+            <p className="text-xs text-slate-400 bg-slate-50 py-2 px-4 rounded-full inline-block">
+              演示账号: <span className="font-mono text-slate-600 font-bold mx-1">demo</span> 密码: <span className="font-mono text-slate-600 font-bold mx-1">demo123</span>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default App;
+// ============================================
+// Sidebar (PC Only)
+// ============================================
+
+function Sidebar({ userId, images, currentImageId, onSelectImage, onNewChat, onDeleteImage, onLogout, isCollapsed, onToggle }: any) {
+  return (
+    <div className={`${isCollapsed ? 'w-[72px]' : 'w-[280px]'} h-full hidden md:flex flex-col bg-slate-50 border-r border-slate-100 flex-shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] relative z-20`}>
+      {/* Brand Header & Toggle */}
+      <div className={`h-16 flex items-center shrink-0 ${isCollapsed ? 'justify-center px-0' : 'justify-between px-5'}`}>
+        <div className={`flex items-center gap-3 transition-opacity duration-200 ${isCollapsed ? '' : 'opacity-100'}`}>
+           <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center text-sm font-bold shadow-md shadow-slate-900/10 cursor-pointer" onClick={onToggle}>
+            {isCollapsed ? '☰' : '🛍️'}
+          </div>
+          {!isCollapsed && (
+            <div className="whitespace-nowrap overflow-hidden">
+              <h1 className="font-bold text-slate-900 text-sm tracking-tight leading-tight">电商智能助手</h1>
+            </div>
+          )}
+        </div>
+        {!isCollapsed && (
+          <button onClick={onToggle} className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        )}
+      </div>
+
+      {/* Primary Action */}
+      <div className={`px-3 mb-4 transition-all duration-300 ${isCollapsed ? 'flex justify-center' : ''}`}>
+        <button
+          onClick={onNewChat}
+          title="新建对话"
+          className={`flex items-center justify-center gap-2 h-9 rounded-lg border border-slate-200 hover:border-slate-400 hover:text-slate-900 text-slate-500 bg-white hover:bg-white transition-all duration-200 group shadow-sm ${isCollapsed ? 'w-9 p-0' : 'w-full px-2'}`}
+        >
+           <div className={`flex items-center justify-center`}>
+             <span className="text-xl leading-none pb-0.5 font-light">+</span>
+           </div>
+           {!isCollapsed && <span className="text-sm font-medium">新建对话</span>}
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 space-y-1 custom-scrollbar">
+        {images.map((image: any) => {
+          const agentType = image.name?.split("_")[0] || "guanhua";
+          const agent = AGENTS_MAP[agentType] || AGENTS_UI[0];
+          const isActive = image.imageId === currentImageId;
+
+          return (
+            <div
+              key={image.imageId}
+              onClick={() => onSelectImage(image.imageId)}
+              title={isCollapsed ? agent.name : undefined}
+              className={`group relative flex items-center gap-3 py-2 rounded-lg cursor-pointer transition-all duration-150 ${
+                isCollapsed ? 'justify-center px-0' : 'px-3'
+              } ${isActive ? "bg-blue-50/60 text-blue-900" : "text-slate-600 hover:bg-slate-100"}`}
+            >
+              {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-blue-500 rounded-r-full"></div>}
+              <span className="text-lg shrink-0 opacity-90">{agent.icon}</span>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0 transition-opacity duration-200">
+                  <div className={`text-sm truncate leading-snug ${isActive ? "font-medium" : "font-normal"}`}>
+                    {agent.name}
+                  </div>
+                </div>
+              )}
+              {!isCollapsed && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteImage(image.imageId); }}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-rose-500 transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={`p-4 border-t border-slate-100 shrink-0 transition-all duration-300 ${isCollapsed ? 'flex justify-center' : ''}`}>
+        <button 
+          className={`flex items-center gap-3 p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all group ${isCollapsed ? 'justify-center w-auto' : 'w-full'}`} 
+          onClick={onLogout}
+          title={isCollapsed ? userId : undefined}
+        >
+          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold border border-white shadow-sm shrink-0">
+            {userId[0].toUpperCase()}
+          </div>
+          {!isCollapsed && (
+            <>
+              <div className="flex-1 text-left min-w-0"><div className="text-xs font-semibold text-slate-700 truncate">{userId}</div></div>
+              <div className="text-slate-300 group-hover:text-slate-600">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+              </div>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Mobile Components (WeChat Style)
+// ============================================
+
+function MobileTabBar({ activeTab, onTabChange }: any) {
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 pb-safe bg-white/95 backdrop-blur border-t border-slate-200 flex items-center justify-around z-50 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
+      <button onClick={() => onTabChange("chats")} className={`flex flex-col items-center gap-1 w-full h-full pt-2 ${activeTab === 'chats' ? 'text-green-600' : 'text-slate-400'}`}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'chats' ? "currentColor" : "none"} stroke="currentColor" strokeWidth={activeTab === 'chats' ? "0" : "2"}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <span className="text-[10px] font-medium">会话</span>
+      </button>
+      <button onClick={() => onTabChange("agents")} className={`flex flex-col items-center gap-1 w-full h-full pt-2 ${activeTab === 'agents' ? 'text-green-600' : 'text-slate-400'}`}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'agents' ? "currentColor" : "none"} stroke="currentColor" strokeWidth={activeTab === 'agents' ? "0" : "2"}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span className="text-[10px] font-medium">通讯录</span>
+      </button>
+      <button onClick={() => onTabChange("me")} className={`flex flex-col items-center gap-1 w-full h-full pt-2 ${activeTab === 'me' ? 'text-green-600' : 'text-slate-400'}`}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'me' ? "currentColor" : "none"} stroke="currentColor" strokeWidth={activeTab === 'me' ? "0" : "2"}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <span className="text-[10px] font-medium">我</span>
+      </button>
+    </div>
+  );
+}
+
+// ============================================
+// Main Page
+// ============================================
+
+function MainPage({ userId, onLogout }: any) {
+  const agentx = useAgentX(WS_URL);
+  const { images, isLoading, createImage, deleteImage } = useImages(agentx, { containerId: userId, autoLoad: true });
+  const [currentImageId, setCurrentImageId] = useState<string | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  // Mobile States
+  const [mobileTab, setMobileTab] = useState<"chats" | "agents" | "me">("chats");
+
+  useEffect(() => {
+    // Only auto-select on desktop
+    if (window.innerWidth >= 768 && !currentImageId && images.length > 0) setCurrentImageId(images[0].imageId);
+  }, [images, currentImageId]);
+
+  const currentImage = images.find((img: any) => img.imageId === currentImageId);
+  const currentAgent = currentImage ? (AGENTS_MAP[currentImage.name?.split("_")[0]] || AGENTS_UI[0]) : AGENTS_UI[0];
+
+  const handleCreateSession = async (agentId: string) => {
+    const agent = AGENTS_MAP[agentId];
+    if (!agent) return;
+    const newImage = await createImage({
+      name: `${agentId}_${Date.now()}`,
+      description: `与${agent.name}协作中`,
+      systemPrompt: agent.systemPrompt,
+    });
+    if (newImage?.imageId) {
+      setCurrentImageId(newImage.imageId);
+      // On mobile, switch to chats tab and enter chat automatically
+      setMobileTab("chats"); 
+    }
+  };
+
+  // Mobile Views
+  const renderMobileView = () => {
+    if (mobileTab === "agents") {
+      return (
+        <div className="p-4 pt-safe pb-safe bg-slate-50 min-h-screen-ios">
+          <div className="h-12 flex items-center px-2 mb-2">
+             <h2 className="text-lg font-bold text-slate-900">智能体通讯录</h2>
+          </div>
+          <div className="space-y-3 pb-20">
+            {AGENTS_UI.map(agent => (
+              <div key={agent.id} onClick={() => handleCreateSession(agent.id)} className="bg-white p-4 rounded-xl flex items-center gap-4 shadow-sm active:bg-slate-50 border border-slate-100">
+                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${agent.theme.icon_bg} ${agent.theme.text}`}>{agent.icon}</div>
+                 <div>
+                   <h3 className="font-bold text-slate-900">{agent.name}</h3>
+                   <p className="text-xs text-slate-500">{agent.description}</p>
+                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (mobileTab === "me") {
+      return (
+        <div className="p-0 bg-slate-100 min-h-screen-ios pt-safe pb-safe">
+          <div className="bg-white p-8 pb-10 flex items-center gap-4 mb-3 border-b border-slate-200 mt-12">
+            <div className="w-16 h-16 rounded-lg bg-slate-200 flex items-center justify-center text-xl font-bold text-slate-500">{userId[0].toUpperCase()}</div>
+            <div>
+              <h2 className="text-xl font-bold">{userId}</h2>
+              <p className="text-sm text-slate-500">ID: {userId}</p>
+            </div>
+          </div>
+          <div className="bg-white border-y border-slate-200">
+             <button onClick={onLogout} className="w-full p-4 text-center text-red-600 font-medium active:bg-slate-50">退出登录</button>
+          </div>
+        </div>
+      );
+    }
+    // Default: Chats
+    return (
+      <div className="bg-white min-h-screen-ios pt-safe pb-safe flex flex-col">
+         {/* Mobile Header - Safe Area Aware */}
+         <div className="h-12 bg-slate-100/90 backdrop-blur border-b border-slate-200 flex items-center justify-center z-10 shrink-0 relative top-0 sticky">
+           <span className="font-semibold text-slate-900">消息 ({images.length})</span>
+           <button onClick={() => setMobileTab("agents")} className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full text-slate-600 active:bg-slate-300">
+             <span className="text-lg leading-none mb-0.5">+</span>
+           </button>
+         </div>
+         
+         <div className="divide-y divide-slate-100 overflow-y-auto flex-1 pb-20">
+           {images.map((image: any) => {
+             const agent = AGENTS_MAP[image.name?.split("_")[0]] || AGENTS_UI[0];
+             return (
+               <div key={image.imageId} onClick={() => setCurrentImageId(image.imageId)} className="p-4 flex gap-3 active:bg-slate-50">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl shrink-0 ${agent.theme.icon_bg} ${agent.theme.text}`}>{agent.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <h3 className="font-medium text-slate-900 truncate">{agent.name}</h3>
+                      <span className="text-[10px] text-slate-400">刚刚</span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate">{image.description}</p>
+                  </div>
+               </div>
+             )
+           })}
+           {images.length === 0 && (
+             <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-3xl mb-4 grayscale opacity-50">📫</div>
+               <p className="text-slate-400 text-sm">暂无消息</p>
+               <button onClick={() => setMobileTab("agents")} className="mt-4 text-blue-600 text-sm font-medium">去通讯录发起对话</button>
+             </div>
+           )}
+         </div>
+      </div>
+    );
+  };
+
+  if (!agentx || isLoading) return <div className="h-screen w-full flex items-center justify-center bg-white"><div className="w-2 h-2 bg-slate-900 rounded-full animate-ping"/></div>;
+
+  return (
+    <div className="h-screen-ios w-full flex bg-white font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900 overflow-hidden">
+      
+      {/* ================= PC LAYOUT ================= */}
+      <Sidebar 
+        userId={userId} images={images} currentImageId={currentImageId}
+        isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onSelectImage={setCurrentImageId} onNewChat={() => setMobileTab("agents")} // On PC new chat redirects to agent list logic if needed, but here sidebar handles it differently
+        onDeleteImage={(id: string) => { if(confirm("删除此对话?")) deleteImage(id); }}
+        onLogout={onLogout}
+      />
+      
+      {/* PC Main Content */}
+      <div className="hidden md:flex flex-1 flex-col h-full relative bg-white min-w-0">
+        <div className="flex-1 overflow-hidden relative">
+          {currentImageId ? (
+            <Chat 
+              key={currentImageId} 
+              agentx={agentx} 
+              imageId={currentImageId} 
+              agentName={currentAgent.name}
+              placeholder={`向 ${currentAgent.name} 发送指令...`}
+              className="h-full relative z-10"
+            />
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center relative z-10 p-8">
+              <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center text-3xl mb-6">✨</div>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">准备就绪</h2>
+              <p className="text-slate-500 text-sm mb-8 text-center max-w-xs">选择左侧的历史对话，或创建一个新的智能体协作会话。</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================= MOBILE LAYOUT ================= */}
+      <div className="md:hidden flex-1 w-full bg-white relative h-full flex flex-col">
+        {/* Mobile Tab Content */}
+        {!currentImageId && renderMobileView()}
+        
+        {/* Mobile Tab Bar */}
+        {!currentImageId && <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />}
+
+        {/* Mobile Chat Interface (Full Screen Overlay) */}
+        {currentImageId && (
+          <div className="fixed inset-0 z-[60] bg-white flex flex-col animate-slide-in-right h-[100dvh]">
+            <div className="h-12 pt-safe bg-slate-100/90 backdrop-blur flex items-center px-4 border-b border-slate-200 shrink-0 box-content">
+              <button onClick={() => setCurrentImageId(null)} className="mr-4 text-slate-600 flex items-center active:text-slate-900">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                <span className="text-sm font-medium">返回</span>
+              </button>
+              <span className="font-bold text-slate-900 truncate flex-1 text-center pr-10">{currentAgent.name}</span>
+              <button className="text-slate-600 w-8 flex justify-end"><span className="text-xl font-bold mb-2">...</span></button>
+            </div>
+            <div className="flex-1 overflow-hidden relative pb-safe">
+              <Chat 
+                key={currentImageId} 
+                agentx={agentx} 
+                imageId={currentImageId} 
+                agentName={currentAgent.name}
+                placeholder="发送消息..."
+                className="h-full"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+export default function App() {
+  const [userId, setUserId] = useState<string | null>(localStorage.getItem("userId"));
+  return userId ? <MainPage userId={userId} onLogout={() => { localStorage.removeItem("userId"); setUserId(null); }} /> : <LoginPage onLogin={setUserId} />;
+}

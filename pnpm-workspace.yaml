@@ -1,0 +1,4 @@
+overrides:
+  '@agentxjs/runtime': link:../AgentX/packages/runtime
+  '@agentxjs/types': link:../AgentX/packages/types
+  agentxjs: link:../AgentX/packages/agentx

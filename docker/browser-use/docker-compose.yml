@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  browser-use:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: browser-use-mcp
+    ports:
+      - "8000:8000"   # MCP Server (SSE)
+      - "5900:5900"   # VNC (调试用，可用 VNC Viewer 连接)
+    volumes:
+      # 持久化浏览器数据（Cookie、LocalStorage 等）
+      - ../../.agentx/browser-data:/app/browser-data
+      # 可选：上传文件目录
+      - ../../.agentx/uploads:/app/uploads
+    environment:
+      # LLM API Keys (browser-use 内部用于决策)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # VNC 密码
+      - VNC_PASSWORD=${VNC_PASSWORD:-browser-use}
+      # 是否等待任务完成
+      - PATIENT=true
+    restart: unless-stopped
+    # 共享内存，避免 Chrome 崩溃
+    shm_size: '2gb'
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

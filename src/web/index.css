@@ -1,8 +1,119 @@
-/* globals.css from @agentxjs/ui already includes Tailwind */
+@import 'tailwindcss';
 
-html,
-body,
-#root {
-  height: 100%;
-  width: 100%;
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  
+  /* Lucid UI Design System Tokens */
+  --color-lucid-bg: #ffffff;
+  --color-rational-main: #2563eb; /* Blue-600 */
+  --color-lucid-border: #f1f5f9; /* Slate-100 */
+}
+
+/* Global Reset */
+body {
+  background-color: var(--color-lucid-bg);
+  color: #0f172a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none; /* Prevent elastic scrolling on Mac/Mobile */
+}
+
+/* =========================================
+   Mobile Safe Area Utilities
+   ========================================= */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.h-screen-ios {
+  height: 100vh; /* Fallback */
+  height: 100dvh;
+}
+
+.min-h-screen-ios {
+  min-height: 100vh; /* Fallback */
+  min-height: 100dvh;
+}
+
+/* =========================================
+   AgentX Chat UI - Bubbly & Modern (Hard Override)
+   ========================================= */
+
+/* Use attribute selectors to be more specific if class names vary */
+div[class*="agentx-user-message"],
+.agentx-user-message {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  border-radius: 18px 18px 2px 18px !important; /* Bottom-Right sharp */
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
+  padding: 12px 16px !important;
+  border: none !important;
+  font-weight: 400 !important;
+  max-width: 85% !important;
+  margin-left: auto !important; /* Force align right */
+  margin-bottom: 12px !important;
+}
+
+div[class*="agentx-ai-message"],
+.agentx-ai-message {
+  background-color: #f8fafc !important; /* Slate-50 */
+  color: #1e293b !important;
+  border-radius: 18px 18px 18px 2px !important; /* Bottom-Left sharp */
+  box-shadow: none !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 14px 18px !important;
+  max-width: 85% !important;
+  margin-right: auto !important; /* Force align left */
+  margin-bottom: 12px !important;
+  line-height: 1.6 !important;
+}
+
+/* Input Area Overrides */
+div[class*="agentx-input-container"],
+.agentx-input-container {
+  border-top: 1px solid #f1f5f9 !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
+  padding: 12px 16px !important;
+}
+
+input[class*="agentx-input-field"],
+.agentx-input-field {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 24px !important;
+  padding: 12px 20px !important;
+  transition: all 0.2s ease !important;
+}
+
+input[class*="agentx-input-field"]:focus,
+.agentx-input-field:focus {
+  background: white !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Mobile specific tweaks */
+@media (max-width: 768px) {
+  .agentx-user-message, .agentx-ai-message {
+    font-size: 15px !important;
+    padding: 10px 14px !important;
+  }
 }

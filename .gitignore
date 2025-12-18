@@ -1,5 +1,6 @@
 # Dependencies
 node_modules
+.pnpm-store
 
 # Build output
 dist
@@ -14,6 +15,7 @@ dist-ssr
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
 
 # Editor directories and files
 .vscode/*
@@ -25,4 +27,17 @@ pnpm-debug.log*
 *.sln
 *.sw?
 .DS_Store
+
+# AgentX data
 .agentx
+
+# Python (should not be in this project)
+.venv
+venv
+*.pyc
+__pycache__
+
+# Temporary files
+*.tmp
+*.temp
+.cache
