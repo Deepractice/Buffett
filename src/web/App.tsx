@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { Chat, useAgentX, useImages } from "@agentxjs/ui";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, PerspectiveCamera, Environment } from "@react-three/drei";
+import { Float, MeshDistortMaterial, Stars, PerspectiveCamera, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import type { AgentInfo } from "../types";
 import {
@@ -15,6 +15,7 @@ import {
   VideoMasterAgent,
   XiaohongshuWriterAgent,
 } from "../agent";
+import { useImageCompression } from "./useImageCompression";
 
 // ============================================
 // Design System Tokens (Mapped to Tailwind)
@@ -470,6 +471,74 @@ function MobileTabBar({ activeTab, onTabChange }: any) {
 }
 
 // ============================================
+// Swipeable List Item (WeChat Style Swipe-to-Delete)
+// ============================================
+
+function SwipeableItem({ children, onDelete, onClick }: { children: React.ReactNode, onDelete: () => void, onClick: () => void }) {
+  const [offset, setOffset] = useState(0);
+  const startX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startX.current === null) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - startX.current;
+    
+    // Only react to horizontal swipes
+    // Allow dragging left up to 100px (button is 80px)
+    if (diff < 0 && diff > -120) {
+       setOffset(diff);
+    } else if (diff > 0 && offset < 0) {
+       // Dragging back right to close
+       setOffset(Math.min(0, -80 + diff));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (offset < -40) {
+      setOffset(-80); // Snap open (Button width 80px)
+    } else {
+      setOffset(0); // Close
+    }
+    startX.current = null;
+  };
+
+  return (
+    <div className="relative overflow-hidden w-full bg-white select-none touch-pan-y">
+       {/* Actions (Behind) */}
+       <div 
+         className="absolute inset-y-0 right-0 w-[80px] bg-red-600 flex items-center justify-center text-white font-medium z-0 active:bg-red-700"
+         onClick={(e) => {
+           e.stopPropagation();
+           onDelete();
+           setOffset(0);
+         }}
+       >
+         删除
+       </div>
+       
+       {/* Content (Foreground) */}
+       <div 
+         className="relative z-10 bg-white transition-transform duration-200 ease-out active:bg-slate-50"
+         style={{ transform: `translateX(${offset}px)` }}
+         onTouchStart={handleTouchStart}
+         onTouchMove={handleTouchMove}
+         onTouchEnd={handleTouchEnd}
+         onClick={() => {
+           if (offset !== 0) setOffset(0); // Tap to close if open
+           else onClick(); // Tap to navigate if closed
+         }}
+       >
+         {children}
+       </div>
+    </div>
+  );
+}
+
+// ============================================
 // Main Page
 // ============================================
 
@@ -478,9 +547,12 @@ function MainPage({ userId, onLogout }: any) {
   const { images, isLoading, createImage, deleteImage } = useImages(agentx, { containerId: userId, autoLoad: true });
   const [currentImageId, setCurrentImageId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
+
   // Mobile States
   const [mobileTab, setMobileTab] = useState<"chats" | "agents" | "me">("chats");
+
+  // 启用图片自动压缩
+  useImageCompression();
 
   useEffect(() => {
     // Only auto-select on desktop
@@ -558,16 +630,22 @@ function MainPage({ userId, onLogout }: any) {
            {images.map((image: any) => {
              const agent = AGENTS_MAP[image.name?.split("_")[0]] || AGENTS_UI[0];
              return (
-               <div key={image.imageId} onClick={() => setCurrentImageId(image.imageId)} className="p-4 flex gap-3 active:bg-slate-50">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl shrink-0 ${agent.theme.icon_bg} ${agent.theme.text}`}>{agent.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-1">
-                      <h3 className="font-medium text-slate-900 truncate">{agent.name}</h3>
-                      <span className="text-[10px] text-slate-400">刚刚</span>
+               <SwipeableItem
+                 key={image.imageId}
+                 onClick={() => setCurrentImageId(image.imageId)}
+                 onDelete={() => deleteImage(image.imageId)}
+               >
+                 <div className="p-4 flex gap-3">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl shrink-0 ${agent.theme.icon_bg} ${agent.theme.text}`}>{agent.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-baseline mb-1">
+                        <h3 className="font-medium text-slate-900 truncate">{agent.name}</h3>
+                        <span className="text-[10px] text-slate-400">刚刚</span>
+                      </div>
+                      <p className="text-xs text-slate-500 truncate">{image.description}</p>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{image.description}</p>
-                  </div>
-               </div>
+                 </div>
+               </SwipeableItem>
              )
            })}
            {images.length === 0 && (

@@ -1,8 +1,9 @@
 @import 'tailwindcss';
 
+/* Tailwind v4 theme customization */
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  
+
   /* Lucid UI Design System Tokens */
   --color-lucid-bg: #ffffff;
   --color-rational-main: #2563eb; /* Blue-600 */
@@ -16,7 +17,6 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overscroll-behavior-y: none; /* Prevent elastic scrolling on Mac/Mobile */
 }
 
 /* =========================================
@@ -30,13 +30,14 @@ body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* Mobile Viewport Height Fix */
 .h-screen-ios {
-  height: 100vh; /* Fallback */
+  height: 100vh; 
   height: 100dvh;
 }
 
 .min-h-screen-ios {
-  min-height: 100vh; /* Fallback */
+  min-height: 100vh;
   min-height: 100dvh;
 }
 
@@ -44,36 +45,36 @@ body {
    AgentX Chat UI - Bubbly & Modern (Hard Override)
    ========================================= */
 
-/* Use attribute selectors to be more specific if class names vary */
+/* Chat Bubbles */
 div[class*="agentx-user-message"],
 .agentx-user-message {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
   color: white !important;
-  border-radius: 18px 18px 2px 18px !important; /* Bottom-Right sharp */
+  border-radius: 18px 18px 2px 18px !important;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
   padding: 12px 16px !important;
   border: none !important;
   font-weight: 400 !important;
   max-width: 85% !important;
-  margin-left: auto !important; /* Force align right */
+  margin-left: auto !important;
   margin-bottom: 12px !important;
 }
 
 div[class*="agentx-ai-message"],
 .agentx-ai-message {
-  background-color: #f8fafc !important; /* Slate-50 */
+  background-color: #f8fafc !important;
   color: #1e293b !important;
-  border-radius: 18px 18px 18px 2px !important; /* Bottom-Left sharp */
+  border-radius: 18px 18px 18px 2px !important;
   box-shadow: none !important;
   border: 1px solid #e2e8f0 !important;
   padding: 14px 18px !important;
   max-width: 85% !important;
-  margin-right: auto !important; /* Force align left */
+  margin-right: auto !important;
   margin-bottom: 12px !important;
   line-height: 1.6 !important;
 }
 
-/* Input Area Overrides */
+/* Input Area */
 div[class*="agentx-input-container"],
 .agentx-input-container {
   border-top: 1px solid #f1f5f9 !important;
@@ -98,16 +99,20 @@ input[class*="agentx-input-field"]:focus,
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
-/* Scrollbar styling */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Mobile specific tweaks */
@@ -115,5 +120,18 @@ input[class*="agentx-input-field"]:focus,
   .agentx-user-message, .agentx-ai-message {
     font-size: 15px !important;
     padding: 10px 14px !important;
+  }
+}
+
+/* Fix for Tailwind v4 missing responsive breakpoints */
+@media (min-width: 768px) {
+  .md\:flex {
+    display: flex !important;
+  }
+  .md\:hidden {
+    display: none !important;
+  }
+  .hidden.md\:flex {
+    display: flex !important;
   }
 }
