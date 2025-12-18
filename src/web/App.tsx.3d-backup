@@ -3,11 +3,8 @@
  * Lucid UI - Design Forward Edition
  */
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { Chat, useAgentX, useImages } from "@agentxjs/ui";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, PerspectiveCamera, Environment } from "@react-three/drei";
-import * as THREE from "three";
 import type { AgentInfo } from "../types";
 import {
   GuanhuaAgent,
